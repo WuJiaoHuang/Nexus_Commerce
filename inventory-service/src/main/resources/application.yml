@@ -1,0 +1,36 @@
+server:
+  port: ${SERVER_PORT:8085}
+
+spring:
+  application:
+    name: inventory-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:app}
+    password: ${SPRING_DATASOURCE_PASSWORD:app}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID:inventory-service-group}
+      auto-offset-reset: earliest
+
+app:
+  kafka:
+    topic:
+      order-created: ${APP_KAFKA_TOPIC_ORDER_CREATED:order-created}
+      order-cancelled: ${APP_KAFKA_TOPIC_ORDER_CANCELLED:order-cancelled}
+      inventory-reserved: ${APP_KAFKA_TOPIC_INVENTORY_RESERVED:inventory-reserved}
+      inventory-rejected: ${APP_KAFKA_TOPIC_INVENTORY_REJECTED:inventory-rejected}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}

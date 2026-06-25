@@ -1,0 +1,15 @@
+server:
+  port: ${SERVER_PORT:8086}
+
+spring:
+  application:
+    name: ai-assistant-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+
+app:
+  security:
+    jwt-secret: ${APP_SECURITY_JWT_SECRET:VJ32as2QWW6FW87WGIueAtMbS1lfD9GBcYOLMF6fIN0=}

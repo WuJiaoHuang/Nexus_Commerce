@@ -1,0 +1,35 @@
+server:
+  port: ${SERVER_PORT:8180}
+
+spring:
+  application:
+    name: user-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:app}
+    password: ${SPRING_DATASOURCE_PASSWORD:app}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID:user-service-group}
+      auto-offset-reset: earliest
+
+app:
+  security:
+    jwt-secret: ${APP_SECURITY_JWT_SECRET:VJ32as2QWW6FW87WGIueAtMbS1lfD9GBcYOLMF6fIN0=}
+  kafka:
+    topic:
+      product-created: ${APP_KAFKA_TOPIC_PRODUCT_CREATED:product-created}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
