@@ -30,6 +30,32 @@ app:
       inventory-reserved: ${APP_KAFKA_TOPIC_INVENTORY_RESERVED:inventory-reserved}
       inventory-rejected: ${APP_KAFKA_TOPIC_INVENTORY_REJECTED:inventory-rejected}
 
+resilience4j:
+  retry:
+    instances:
+      orderPreview:
+        max-attempts: 3
+        wait-duration: 200ms
+  circuitbreaker:
+    instances:
+      orderPreview:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,circuitbreakers,retries
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
 eureka:
   client:
     service-url:

@@ -1,5 +1,7 @@
 package org.example.com.orderservice.workflow;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.example.com.orderservice.dto.InventoryView;
 import org.example.com.orderservice.dto.OrderPreviewRequest;
 import org.example.com.orderservice.dto.OrderPreviewResponse;
@@ -28,6 +30,8 @@ public class OrderWorkflowServiceImpl implements OrderWorkflowService {
     }
 
     @Override
+    @Retry(name = "orderPreview")
+    @CircuitBreaker(name = "orderPreview", fallbackMethod = "previewFallback")
     public OrderPreviewResponse preview(OrderPreviewRequest request) {
         if (request == null || request.getProductId() == null || request.getProductId().isBlank()) {
             return new OrderPreviewResponse(null, null, false, 0, false, "productId is required");
@@ -43,26 +47,31 @@ public class OrderWorkflowServiceImpl implements OrderWorkflowService {
         CompletableFuture<InventoryView> inventoryFuture = CompletableFuture.supplyAsync(
                 () -> fetchInventory(request.getProductId()), orderWorkflowExecutor);
 
-        try {
-            CompletableFuture.allOf(productFuture, inventoryFuture).join();
-            Optional<ProductView> product = productFuture.join();
-            InventoryView inventory = inventoryFuture.join();
+        CompletableFuture.allOf(productFuture, inventoryFuture).join();
+        Optional<ProductView> product = productFuture.join();
+        InventoryView inventory = inventoryFuture.join();
 
-            if (product.isEmpty()) {
-                return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), false,
-                        0, false, "product not found");
-            }
-
-            int available = inventory.getAvailableQuantity() == null ? 0 : inventory.getAvailableQuantity();
-            boolean reservable = available >= request.getQuantity();
-            String message = reservable ? "ready to place order" : "insufficient inventory";
-
-            return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), true,
-                    available, reservable, message);
-        } catch (CompletionException ex) {
+        if (product.isEmpty()) {
             return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), false,
-                    0, false, "downstream service error: " + ex.getCause().getMessage());
+                    0, false, "product not found");
         }
+
+        int available = inventory.getAvailableQuantity() == null ? 0 : inventory.getAvailableQuantity();
+        boolean reservable = available >= request.getQuantity();
+        String message = reservable ? "ready to place order" : "insufficient inventory";
+
+        return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), true,
+                available, reservable, message);
+    }
+
+    public OrderPreviewResponse previewFallback(OrderPreviewRequest request, Throwable throwable) {
+        String productId = request == null ? null : request.getProductId();
+        Integer quantity = request == null ? null : request.getQuantity();
+        Throwable root = throwable instanceof CompletionException && throwable.getCause() != null
+                ? throwable.getCause() : throwable;
+        String reason = root == null ? "downstream service unavailable" : root.getMessage();
+        return new OrderPreviewResponse(productId, quantity, false, 0, false,
+                "preview temporarily degraded: " + reason);
     }
 
     private Optional<ProductView> fetchProduct(String productId) {
