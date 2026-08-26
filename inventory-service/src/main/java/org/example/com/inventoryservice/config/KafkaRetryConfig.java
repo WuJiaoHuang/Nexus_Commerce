@@ -18,7 +18,8 @@ public class KafkaRetryConfig {
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
             ConsumerFactory<String, String> consumerFactory,
             KafkaTemplate<String, String> kafkaTemplate,
-            @Value("${app.kafka.topic.inventory-dead-letter}") String deadLetterTopic
+            @Value("${app.kafka.topic.inventory-dead-letter}") String deadLetterTopic,
+            @Value("${spring.kafka.listener.auto-startup:true}") boolean autoStartup
     ) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
                 kafkaTemplate,
@@ -30,6 +31,7 @@ public class KafkaRetryConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler);
+        factory.setAutoStartup(autoStartup);
         return factory;
     }
 }
