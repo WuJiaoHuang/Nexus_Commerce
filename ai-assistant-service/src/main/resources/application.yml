@@ -13,3 +13,12 @@ eureka:
 app:
   security:
     jwt-secret: ${APP_SECURITY_JWT_SECRET:VJ32as2QWW6FW87WGIueAtMbS1lfD9GBcYOLMF6fIN0=}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
