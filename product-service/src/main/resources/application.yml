@@ -21,10 +21,29 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
 app:
+  cache:
+    product-ttl-seconds: ${APP_CACHE_PRODUCT_TTL_SECONDS:300}
+    empty-ttl-seconds: ${APP_CACHE_EMPTY_TTL_SECONDS:60}
+    lock-ttl-seconds: ${APP_CACHE_LOCK_TTL_SECONDS:3}
   kafka:
     topic:
       product-created: ${APP_KAFKA_TOPIC_PRODUCT_CREATED:product-created}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
 
 eureka:
   client:

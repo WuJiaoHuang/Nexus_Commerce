@@ -1,6 +1,7 @@
 package org.example.com.productservice.impl;
 
 import org.example.com.productservice.dao.ProductRepo;
+import org.example.com.productservice.cache.ProductCacheService;
 import org.example.com.productservice.kafka.ProductEventProducer;
 import org.example.com.productservice.pojo.Product;
 import org.example.com.productservice.service.ProductService;
@@ -15,16 +16,24 @@ public class ProductServiceImpl implements ProductService {
 
     ProductRepo productRepo;
     ProductEventProducer productEventProducer;
+    ProductCacheService productCacheService;
 
     @Autowired
-    public ProductServiceImpl(ProductRepo productRepo, ProductEventProducer productEventProducer) {
+    public ProductServiceImpl(ProductRepo productRepo,
+                              ProductEventProducer productEventProducer,
+                              ProductCacheService productCacheService) {
         this.productRepo = productRepo;
         this.productEventProducer = productEventProducer;
+        this.productCacheService = productCacheService;
     }
 
     @Override
     public Product getProductById(String id) {
-        return productRepo.findById(id).orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException("product id is required");
+        }
+        return productCacheService.getProduct(id,
+                () -> productRepo.findById(id).orElse(null));
     }
 
     @Override
@@ -36,12 +45,13 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("price must not be null and greater than 0");
         }
         Product savedProduct = productRepo.save(product);
+        productCacheService.cacheProduct(savedProduct);
         productEventProducer.publishProductCreated(savedProduct);
         return savedProduct;
     }
 
     @Override
     public List<Product> getProductsByUserId(String userId) {
-        return productRepo.findAll();
+        return productCacheService.getProductsByUser(userId, productRepo::findAll);
     }
 }
