@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 @Service
 public class OrderEventProducer {
 
@@ -23,14 +26,18 @@ public class OrderEventProducer {
     }
 
     public void publishOrderCreated(OrderRecord orderRecord) {
-        String payload = "orderId=%s;productId=%s;quantity=%d"
-                .formatted(orderRecord.getId(), orderRecord.getProductId(), orderRecord.getQuantity());
+        String payload = payload("ORDER_CREATED", orderRecord);
         kafkaTemplate.send(orderCreatedTopic, orderRecord.getId(), payload);
     }
 
     public void publishOrderCancelled(OrderRecord orderRecord) {
-        String payload = "orderId=%s;productId=%s;quantity=%d"
-                .formatted(orderRecord.getId(), orderRecord.getProductId(), orderRecord.getQuantity());
+        String payload = payload("ORDER_CANCELLED", orderRecord);
         kafkaTemplate.send(orderCancelledTopic, orderRecord.getId(), payload);
+    }
+
+    private String payload(String eventType, OrderRecord orderRecord) {
+        return "eventId=%s;eventType=%s;orderId=%s;userId=%s;productId=%s;quantity=%d;createdAt=%s"
+                .formatted(UUID.randomUUID(), eventType, orderRecord.getId(), orderRecord.getUserId(),
+                        orderRecord.getProductId(), orderRecord.getQuantity(), LocalDateTime.now());
     }
 }

@@ -15,21 +15,23 @@ public class OrderEventConsumer {
 
     @KafkaListener(topics = "${app.kafka.topic.order-created}", groupId = "${spring.kafka.consumer.group-id}")
     public void onOrderCreated(String message) {
+        String eventId = valueOf(message, "eventId");
         String orderId = valueOf(message, "orderId");
         String productId = valueOf(message, "productId");
         Integer quantity = intValueOf(message, "quantity");
         if (orderId != null && productId != null && quantity != null) {
-            inventoryService.reserve(orderId, productId, quantity);
+            inventoryService.reserve(eventId, orderId, productId, quantity);
         }
     }
 
     @KafkaListener(topics = "${app.kafka.topic.order-cancelled}", groupId = "${spring.kafka.consumer.group-id}")
     public void onOrderCancelled(String message) {
+        String eventId = valueOf(message, "eventId");
         String orderId = valueOf(message, "orderId");
         String productId = valueOf(message, "productId");
         Integer quantity = intValueOf(message, "quantity");
         if (orderId != null && productId != null && quantity != null) {
-            inventoryService.release(orderId, productId, quantity);
+            inventoryService.release(eventId, orderId, productId, quantity);
         }
     }
 
