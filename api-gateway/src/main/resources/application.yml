@@ -13,34 +13,36 @@ spring:
 
   cloud:
     gateway:
-      routes:
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/user/**
-          filters:
-            - AddRequestHeader=color, blue
-        - id: product-service
-          uri: lb://PRODUCT-SERVICE
-          predicates:
-            - Path=/product/**
-          filters:
-            - AddRequestHeader=color, blue
-        - id: order-service
-          uri: lb://ORDER-SERVICE
-          predicates:
-            - Path=/orders/**
-          filters:
-            - AddRequestHeader=color, blue
-        - id: inventory-service
-          uri: lb://INVENTORY-SERVICE
-          predicates:
-            - Path=/inventory/**
-          filters:
-            - AddRequestHeader=color, blue
-        - id: ai-assistant-service
-          uri: lb://AI-ASSISTANT-SERVICE
-          predicates:
-            - Path=/ai/**
-          filters:
-            - AddRequestHeader=color, blue
+      server:
+        webflux:
+          routes:
+            - id: user-service
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/user/**
+              filters:
+                - AddRequestHeader=color, blue
+            - id: product-service
+              uri: lb://PRODUCT-SERVICE
+              predicates:
+                - Path=/product/**
+              filters:
+                - AddRequestHeader=color, blue
+            - id: order-service
+              uri: lb://ORDER-SERVICE
+              predicates:
+                - Path=/orders/**
+              filters:
+                - AddRequestHeader=color, blue
+            - id: inventory-service
+              uri: lb://INVENTORY-SERVICE
+              predicates:
+                - Path=/inventory/**
+              filters:
+                - AddRequestHeader=color, blue
+            - id: ai-assistant-service
+              uri: lb://AI-ASSISTANT-SERVICE
+              predicates:
+                - Path=/ai/**
+              filters:
+                - AddRequestHeader=color, blue
