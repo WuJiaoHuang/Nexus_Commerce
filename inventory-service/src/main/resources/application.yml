@@ -37,11 +37,13 @@ app:
   cache:
     inventory-ttl-seconds: ${APP_CACHE_INVENTORY_TTL_SECONDS:120}
   kafka:
+    enable-test-failure: ${APP_KAFKA_ENABLE_TEST_FAILURE:false}
     topic:
       order-created: ${APP_KAFKA_TOPIC_ORDER_CREATED:order-created}
       order-cancelled: ${APP_KAFKA_TOPIC_ORDER_CANCELLED:order-cancelled}
       inventory-reserved: ${APP_KAFKA_TOPIC_INVENTORY_RESERVED:inventory-reserved}
       inventory-rejected: ${APP_KAFKA_TOPIC_INVENTORY_REJECTED:inventory-rejected}
+      inventory-released: ${APP_KAFKA_TOPIC_INVENTORY_RELEASED:inventory-released}
       inventory-dead-letter: ${APP_KAFKA_TOPIC_INVENTORY_DEAD_LETTER:inventory-dead-letter}
 
 management:

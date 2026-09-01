@@ -48,7 +48,10 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderRecord cancelOrder(String orderId) {
         OrderRecord orderRecord = getOrder(orderId);
-        orderRecord.setStatus("CANCELLED");
+        if ("CANCELLED".equals(orderRecord.getStatus())) {
+            return orderRecord;
+        }
+        orderRecord.setStatus("CANCELLING");
         OrderRecord savedOrder = orderRepository.save(orderRecord);
         orderEventProducer.publishOrderCancelled(savedOrder);
         return savedOrder;
@@ -67,6 +70,14 @@ public class OrderServiceImpl implements OrderService {
     public void markOrderRejected(String orderId, String reason) {
         OrderRecord orderRecord = getOrder(orderId);
         orderRecord.setStatus("REJECTED:" + reason);
+        orderRepository.save(orderRecord);
+    }
+
+    @Override
+    @Transactional
+    public void markOrderCancelled(String orderId) {
+        OrderRecord orderRecord = getOrder(orderId);
+        orderRecord.setStatus("CANCELLED");
         orderRepository.save(orderRecord);
     }
 }

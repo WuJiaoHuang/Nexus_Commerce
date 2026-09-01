@@ -10,15 +10,18 @@ public class InventoryEventProducer {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final String inventoryReservedTopic;
     private final String inventoryRejectedTopic;
+    private final String inventoryReleasedTopic;
 
     public InventoryEventProducer(
             KafkaTemplate<String, String> kafkaTemplate,
             @Value("${app.kafka.topic.inventory-reserved}") String inventoryReservedTopic,
-            @Value("${app.kafka.topic.inventory-rejected}") String inventoryRejectedTopic
+            @Value("${app.kafka.topic.inventory-rejected}") String inventoryRejectedTopic,
+            @Value("${app.kafka.topic.inventory-released}") String inventoryReleasedTopic
     ) {
         this.kafkaTemplate = kafkaTemplate;
         this.inventoryReservedTopic = inventoryReservedTopic;
         this.inventoryRejectedTopic = inventoryRejectedTopic;
+        this.inventoryReleasedTopic = inventoryReleasedTopic;
     }
 
     public void publishReserved(String orderId) {
@@ -27,5 +30,9 @@ public class InventoryEventProducer {
 
     public void publishRejected(String orderId, String reason) {
         kafkaTemplate.send(inventoryRejectedTopic, orderId, "orderId=%s;reason=%s".formatted(orderId, reason));
+    }
+
+    public void publishReleased(String orderId) {
+        kafkaTemplate.send(inventoryReleasedTopic, orderId, "orderId=%s".formatted(orderId));
     }
 }

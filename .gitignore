@@ -1,5 +1,9 @@
 target/
 .env
 .idea/
+.vscode/
 *.iml
 *.log
+application-local.yml
+.m2repo/
+work-runtime-logs/

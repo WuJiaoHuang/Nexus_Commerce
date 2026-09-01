@@ -8,4 +8,5 @@ public interface OrderService {
     OrderRecord cancelOrder(String orderId);
     void markOrderReserved(String orderId);
     void markOrderRejected(String orderId, String reason);
+    void markOrderCancelled(String orderId);
 }

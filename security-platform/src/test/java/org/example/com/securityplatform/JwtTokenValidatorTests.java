@@ -31,4 +31,31 @@ class JwtTokenValidatorTests {
         assertTrue(result.valid());
         assertEquals("alice", result.username());
     }
+
+    @Test
+    void rejectsInvalidToken() {
+        SecretKey key = Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256);
+        String base64 = Base64.getEncoder().encodeToString(key.getEncoded());
+
+        JwtValidationResult result = new JwtTokenValidator(base64).validate("not-a-jwt");
+
+        assertFalse(result.valid());
+        assertEquals("Invalid token", result.message());
+    }
+
+    @Test
+    void rejectsExpiredToken() {
+        SecretKey key = Keys.secretKeyFor(io.jsonwebtoken.SignatureAlgorithm.HS256);
+        String base64 = Base64.getEncoder().encodeToString(key.getEncoded());
+        String token = Jwts.builder()
+                .subject("alice")
+                .issuedAt(new Date(System.currentTimeMillis() - 120_000))
+                .expiration(new Date(System.currentTimeMillis() - 60_000))
+                .signWith(key)
+                .compact();
+
+        JwtValidationResult result = new JwtTokenValidator(base64).validate(token);
+
+        assertFalse(result.valid());
+    }
 }

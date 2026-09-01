@@ -56,8 +56,12 @@ public class JwtService {
         return extractAllClaims(token).getExpiration().before(new Date());
     }
     public boolean validateToken(String token,String username) {
-        final String extractUsername = extractUsername(token);
-        return (extractUsername(token).equals(username) && !isTokenValid(token));
+        try {
+            final String extractedUsername = extractUsername(token);
+            return (extractedUsername.equals(username) && !isTokenValid(token));
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
 }

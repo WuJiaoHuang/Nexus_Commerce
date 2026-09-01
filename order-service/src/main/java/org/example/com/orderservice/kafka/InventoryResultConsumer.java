@@ -34,6 +34,14 @@ public class InventoryResultConsumer {
         }
     }
 
+    @KafkaListener(topics = "${app.kafka.topic.inventory-released}", groupId = "${spring.kafka.consumer.group-id}")
+    public void consumeInventoryReleased(String message) {
+        String orderId = valueOf(message, "orderId");
+        if (orderId != null) {
+            orderService.markOrderCancelled(orderId);
+        }
+    }
+
     private String valueOf(String message, String key) {
         String[] parts = message.split(";");
         for (String part : parts) {

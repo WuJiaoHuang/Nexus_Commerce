@@ -29,6 +29,7 @@ app:
       order-cancelled: ${APP_KAFKA_TOPIC_ORDER_CANCELLED:order-cancelled}
       inventory-reserved: ${APP_KAFKA_TOPIC_INVENTORY_RESERVED:inventory-reserved}
       inventory-rejected: ${APP_KAFKA_TOPIC_INVENTORY_REJECTED:inventory-rejected}
+      inventory-released: ${APP_KAFKA_TOPIC_INVENTORY_RELEASED:inventory-released}
 
 resilience4j:
   retry:

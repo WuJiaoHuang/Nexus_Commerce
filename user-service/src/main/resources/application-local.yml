@@ -3,22 +3,24 @@ spring:
     activate:
       on-profile: local
   datasource:
-    url: jdbc:mysql://localhost:3306/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: app
-    password: app
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:app}
+    password: ${SPRING_DATASOURCE_PASSWORD:app}
     driver-class-name: com.mysql.cj.jdbc.Driver
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id: user-service-group
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID:user-service-group}
       auto-offset-reset: earliest
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
 
 app:
+  security:
+    jwt-secret: ${APP_SECURITY_JWT_SECRET:bmV4dXNfZGV2X2p3dF9zZWNyZXRfMzJfYnl0ZXMhISE=}
   kafka:
     topic:
-      product-created: product-created
+      product-created: ${APP_KAFKA_TOPIC_PRODUCT_CREATED:product-created}

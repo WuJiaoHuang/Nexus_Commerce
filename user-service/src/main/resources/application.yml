@@ -24,7 +24,7 @@ spring:
 
 app:
   security:
-    jwt-secret: ${APP_SECURITY_JWT_SECRET:VJ32as2QWW6FW87WGIueAtMbS1lfD9GBcYOLMF6fIN0=}
+    jwt-secret: ${APP_SECURITY_JWT_SECRET:bmV4dXNfZGV2X2p3dF9zZWNyZXRfMzJfYnl0ZXMhISE=}
   kafka:
     topic:
       product-created: ${APP_KAFKA_TOPIC_PRODUCT_CREATED:product-created}

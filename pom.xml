@@ -10,10 +10,10 @@
     </parent>
     <packaging>pom</packaging>
     <groupId>org.example.com</groupId>
-    <artifactId>springcloud3</artifactId>
+    <artifactId>nexus-commerce</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>springcloud3</name>
-    <description>springcloud3</description>
+    <name>Nexus Commerce</name>
+    <description>Spring Cloud microservice backend for Nexus Commerce</description>
     <url/>
     <licenses>
         <license/>
@@ -39,7 +39,6 @@
         <module>inventory-service</module>
         <module>security-platform</module>
         <module>ai-assistant-service</module>
-        <module>monolithic</module>
     </modules>
     <dependencies>
         <dependency>

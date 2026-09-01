@@ -104,6 +104,7 @@ public class InventoryServiceImpl implements InventoryService {
         item.setAvailableQuantity(item.getAvailableQuantity() + reservation.getQuantity());
         inventoryCacheService.cacheInventory(inventoryRepository.save(item));
         inventoryReservationRepository.deleteById(orderId);
+        inventoryEventProducer.publishReleased(orderId);
         markProcessed(eventId, "ORDER_CANCELLED", orderId);
     }
 

@@ -46,3 +46,7 @@ spring:
                 - Path=/ai/**
               filters:
                 - AddRequestHeader=color, blue
+
+app:
+  security:
+    jwt-secret: ${APP_SECURITY_JWT_SECRET:bmV4dXNfZGV2X2p3dF9zZWNyZXRfMzJfYnl0ZXMhISE=}

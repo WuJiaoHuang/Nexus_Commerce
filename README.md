@@ -1,128 +1,63 @@
 # Nexus Commerce
 
-Nexus Commerce is a Spring Cloud microservice backend for an e-commerce workflow. It focuses on service decomposition, event-driven order processing, cache optimization, resilience, observability, and an AI assistant that calls backend business tools.
+Nexus Commerce 是一个基于 Spring Cloud 的电商后端微服务项目。当前第一阶段聚焦已有主链能力：Gateway、JWT、Eureka、MySQL、Redis、Kafka、订单库存 Saga、Resilience4j 和基础可观测性。
 
-## Architecture
+本阶段没有引入 Doris、analytics-service、Elasticsearch、RabbitMQ、Redisson、Kubernetes、Flink、RocketMQ，也没有新增微服务。
 
-Core services:
+## 架构
 
-- `api-gateway`: unified routing and authentication entry.
-- `eureka`: service discovery.
-- `user-service`: registration, login, JWT-related user data.
-- `product-service`: product APIs with Redis cache-aside reads.
-- `order-service`: order lifecycle and preview orchestration.
-- `inventory-service`: inventory query, reservation, release, Kafka idempotent consumption.
-- `ai-assistant-service`: tool-calling assistant for order, product, inventory, and after-sales questions.
-- `security-platform`: shared JWT validation utilities.
+当前主工程模块：
 
-Main workflow:
+- `eureka`：服务注册与发现。
+- `api-gateway`：统一入口、路由和 JWT 鉴权。
+- `user-service`：用户注册、登录和 JWT 生成。
+- `product-service`：商品管理，使用 MySQL 持久化和 Redis Cache Aside。
+- `order-service`：订单创建、订单状态流转、订单预览容错。
+- `inventory-service`：库存查询、预留、释放、Kafka 幂等消费。
+- `security-platform`：共享 JWT 校验组件。
+- `ai-assistant-service`：保留已有模块，本阶段不继续增强。
+
+核心调用链：
 
 ```text
 Client
   -> API Gateway
-  -> Order Service
-  -> Kafka order-created event
+  -> User / Product / Order / Inventory
+
+Order Service
+  -> Kafka order-created
   -> Inventory Service
-  -> Kafka inventory-reserved / inventory-rejected event
-  -> Order Service updates final order status
+  -> Kafka inventory-reserved / inventory-rejected / inventory-released
+  -> Order Service
 ```
 
-## Highlights
+## 本地运行
 
-### Redis Cache
-
-`product-service` uses cache-aside for product detail and product list queries:
-
-```text
-Request -> Redis -> miss -> MySQL -> write Redis -> response
-```
-
-Implemented safeguards:
-
-- Empty-value cache for cache penetration.
-- Per-key short lock for hot key breakdown.
-- TTL jitter to reduce cache avalanche risk.
-- Redis password is read from `REDIS_PASSWORD`; no real password is committed.
-
-`inventory-service` caches hot inventory reads and refreshes cache after inventory mutation.
-
-### Kafka Reliability
-
-Order events include `eventId`, `eventType`, `orderId`, `userId`, `productId`, `quantity`, and `createdAt`.
-
-`inventory-service` records consumed event IDs in `processed_event`, making reservation and cancellation idempotent. Consumer failures are retried and then routed to a dead-letter topic.
-
-### Saga Consistency
-
-The order-inventory flow uses eventual consistency:
-
-- Order starts as `CREATED`.
-- Inventory reservation success marks order as `RESERVED`.
-- Inventory rejection marks order as `REJECTED:<reason>`.
-- Order cancellation releases reserved inventory.
-
-This keeps the order database and inventory database independently owned while still giving a clear compensation path.
-
-### Resilience4j
-
-`order-service` protects order preview calls with:
-
-- RestTemplate connect/read timeout.
-- Retry.
-- Circuit breaker.
-- Business fallback response instead of raw 500 errors.
-
-### Observability
-
-Spring Boot Actuator + Micrometer expose Prometheus metrics from business services. The local stack includes Prometheus and Grafana for:
-
-- QPS.
-- P95/P99 latency.
-- Error rate.
-- JVM metrics.
-- Kafka consumer behavior.
-- Database pool metrics.
-
-### AI Assistant Tool Calling
-
-`ai-assistant-service` is not only a chat wrapper. It identifies order/product-related prompts and calls backend tools:
-
-- Order lookup.
-- Product lookup.
-- Inventory lookup.
-- After-sales rule lookup.
-
-Example prompt:
-
-```text
-我的订单为什么还没发货？orderId=xxx productId=yyy
-```
-
-The assistant calls the relevant services and returns a structured answer with tool results.
-
-## Local Run
-
-Create a local `.env` from the template:
+复制环境变量模板：
 
 ```bash
 cp .env.example .env
 ```
 
-Set your local secrets in `.env`:
+按本地环境设置 `.env`。示例值只用于开发，不要提交真实密码或个人 JWT secret。
+
+常用变量：
 
 ```text
-SPRING_DATASOURCE_PASSWORD=<your-local-password>
-REDIS_PASSWORD=<your-local-password>
-APP_SECURITY_JWT_SECRET=<your-base64-secret>
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+SPRING_DATASOURCE_USERNAME=app
+SPRING_DATASOURCE_PASSWORD=app
+REDIS_PASSWORD=nexus_dev
+APP_SECURITY_JWT_SECRET=<base64-encoded-256-bit-dev-secret>
 ```
 
-Start local infrastructure:
+启动基础设施：
 
 ```bash
 docker compose up -d mysql redis zookeeper kafka prometheus grafana
 ```
 
-Run services from separate terminals:
+启动服务：
 
 ```bash
 mvn -pl eureka spring-boot:run
@@ -130,43 +65,133 @@ mvn -pl user-service spring-boot:run -Dspring-boot.run.profiles=local
 mvn -pl product-service spring-boot:run -Dspring-boot.run.profiles=local
 mvn -pl order-service spring-boot:run -Dspring-boot.run.profiles=local
 mvn -pl inventory-service spring-boot:run -Dspring-boot.run.profiles=local
-mvn -pl ai-assistant-service spring-boot:run -Dspring-boot.run.profiles=local
+mvn -pl api-gateway spring-boot:run
 ```
 
-Tables are created or updated by JPA with `spring.jpa.hibernate.ddl-auto=update`. The default database is `demo_db`.
-
-Useful endpoints:
-
-- Eureka: `http://localhost:8761`
-- Product: `GET http://localhost:8081/product/{id}`
-- Order preview: `POST http://localhost:8084/orders/preview`
-- Inventory: `GET http://localhost:8085/inventory/{productId}`
-- AI assistant: `POST http://localhost:8086/ai/assist`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000`
-
-## Verification
-
-Run tests:
+如果本机 3306 已被占用，可以改用：
 
 ```bash
-mvn test
+MYSQL_PORT=13307 docker compose up -d mysql redis zookeeper kafka
 ```
 
-The test suite uses H2 for context tests so CI and reviewers do not need local MySQL credentials. Local manual runs use MySQL, Redis, and Kafka through environment variables.
+并同步设置：
 
-Resume a failed Maven build:
+```text
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:13307/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+```
+
+## 业务能力
+
+### Gateway 和 JWT
+
+`api-gateway` 路由以下路径：
+
+- `/user/**`
+- `/product/**`
+- `/orders/**`
+- `/inventory/**`
+
+`POST /user` 和 `POST /user/login` 是公开接口。其他业务接口需要 `Authorization: Bearer <jwt>`。
+
+JWT secret 通过 `APP_SECURITY_JWT_SECRET` 注入。Gateway 使用 `security-platform` 的 `JwtTokenValidator` 解析 token，并在校验后写入可信的用户上下文请求头。
+
+### Product + Redis
+
+`product-service` 使用 MySQL 保存商品数据，使用 Redis 做商品详情缓存：
+
+```text
+GET Product
+  -> Redis hit
+  -> Redis miss
+  -> MySQL
+  -> write Redis
+```
+
+当前已包含空值缓存、短锁和 TTL jitter。商品写入后会删除相关缓存，避免继续读取旧值。
+
+### Order + Inventory + Kafka
+
+订单创建后，`order-service` 保存订单并发送 `order-created` 事件。事件包含：
+
+- `eventId`
+- `eventType`
+- `orderId`
+- `userId`
+- `productId`
+- `quantity`
+- `createdAt`
+
+`inventory-service` 消费订单事件后判断库存：
+
+- 库存足够：预留库存，发送 `inventory-reserved`，订单更新为 `RESERVED`。
+- 库存不足：发送 `inventory-rejected`，订单更新为 `REJECTED:<reason>`。
+
+### Saga 取消补偿
+
+已预留库存的订单取消时：
+
+```text
+Order RESERVED
+  -> cancel
+  -> order-cancelled
+  -> Inventory release
+  -> inventory-released
+  -> Order CANCELLED
+```
+
+库存预留和释放使用 `processed_event` 做 Kafka 消费幂等，重复事件不会重复扣减或重复释放库存。
+
+### Kafka Retry / DLT
+
+`inventory-service` 配置了有限重试和死信 Topic：
+
+- 重试：`DefaultErrorHandler` + `FixedBackOff`
+- DLT：`inventory-dead-letter`
+
+默认不会触发测试失败。需要验证 DLT 时，可以临时设置：
+
+```text
+APP_KAFKA_ENABLE_TEST_FAILURE=true
+```
+
+然后向 `order-created` 发送包含 `forceFailure=true` 的测试消息。失败日志包含 `eventId` 和 `orderId`，超过重试次数后消息进入 `inventory-dead-letter`。
+
+### Resilience4j
+
+`order-service` 的订单预览接口使用 Resilience4j：
+
+- timeout
+- retry
+- circuit breaker
+- fallback
+
+当 `product-service` 不可用时，`POST /orders/preview` 返回业务降级响应，而不是直接暴露 raw 500。
+
+## 测试
+
+运行全仓测试：
 
 ```bash
-mvn test -rf :<module-name>
+mvn clean test
 ```
 
-## Interview Talking Points
+打包：
 
-- Why cache-aside was chosen and how penetration, breakdown, and avalanche are handled.
-- Why order creation and inventory reservation are decoupled through Kafka.
-- How `eventId` supports idempotent consumption.
-- How Saga compensation works when inventory reservation fails.
-- Why preview uses timeout, retry, circuit breaker, and fallback.
-- What Prometheus/Grafana metrics help diagnose production issues.
-- How AI tool calling connects LLM-style interaction with real backend services.
+```bash
+mvn clean package
+```
+
+当前主工程不包含 `monolithic` 模块；如果本地 Maven 仓库不可写，可以临时指定项目内仓库：
+
+```bash
+mvn -Dmaven.repo.local=.m2repo clean test
+mvn -Dmaven.repo.local=.m2repo clean package
+```
+
+## Legacy / Historical Monolith
+
+`monolithic` 目录保留为微服务拆分前的历史版本，仅用于架构演进对比。本阶段不删除该目录，但它不参与当前父工程构建和核心微服务运行。
+
+## 后续阶段
+
+Doris Analytics / analytics-service：Not Added Yet，计划在后续阶段单独设计和验证。
