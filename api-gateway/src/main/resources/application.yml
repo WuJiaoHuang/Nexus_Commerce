@@ -50,3 +50,21 @@ spring:
 app:
   security:
     jwt-secret: ${APP_SECURITY_JWT_SECRET:bmV4dXNfZGV2X2p3dF9zZWNyZXRfMzJfYnl0ZXMhISE=}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+  endpoint:
+    health:
+      show-details: always
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

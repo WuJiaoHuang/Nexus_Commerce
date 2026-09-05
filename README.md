@@ -167,6 +167,71 @@ APP_KAFKA_ENABLE_TEST_FAILURE=true
 
 当 `product-service` 不可用时，`POST /orders/preview` 返回业务降级响应，而不是直接暴露 raw 500。
 
+## Resilience & Observability
+
+### Resilience4j
+
+本次容错改造作用在 `ai-assistant-service` 已有的真实 HTTP 工具调用上：
+
+```text
+ai-assistant-service
+        |
+        +--> order-service
+        |
+        +--> product-service
+        |
+        +--> inventory-service
+```
+
+三条下游调用分别配置独立的 Resilience4j instance：
+
+- `orderService`
+- `productService`
+- `inventoryService`
+
+每个调用都启用：
+
+- Retry
+- CircuitBreaker
+- Fallback
+
+当下游服务不可用时，AI Assistant 返回业务降级结果，例如 `Inventory service is temporarily unavailable`，而不是直接向用户暴露 500。
+
+### Monitoring
+
+主要 Spring Boot 服务通过 Actuator 暴露 Prometheus 指标：
+
+```text
+Spring Boot Services
+       |
+       | /actuator/prometheus
+       v
+   Prometheus
+       |
+       v
+    Grafana
+```
+
+当前监控覆盖：
+
+- QPS
+- P95
+- P99
+- 5xx
+- JVM Heap
+- Threads
+- GC
+- CPU
+- CircuitBreaker
+- Retry
+
+访问地址：
+
+```text
+Prometheus: http://localhost:9090
+Grafana:    http://localhost:3000
+```
+
 ## 测试
 
 运行全仓测试：

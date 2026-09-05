@@ -40,6 +40,7 @@ public class ApplicationConfiguration {
         http.authorizeHttpRequests(auth ->
                 auth.requestMatchers(HttpMethod.POST, "/user", "/user/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/user/csrf").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
         );
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

@@ -50,12 +50,22 @@ management:
     web:
       exposure:
         include: health,info,prometheus,metrics,circuitbreakers,retries
+
   endpoint:
     health:
       show-details: always
+
   health:
     circuitbreakers:
       enabled: true
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 eureka:
   client:

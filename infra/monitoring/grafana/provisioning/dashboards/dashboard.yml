@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'Nexus Commerce'
+    orgId: 1
+    folder: 'Nexus Commerce'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

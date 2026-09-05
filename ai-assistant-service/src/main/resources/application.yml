@@ -14,11 +14,73 @@ app:
   security:
     jwt-secret: ${APP_SECURITY_JWT_SECRET:bmV4dXNfZGV2X2p3dF9zZWNyZXRfMzJfYnl0ZXMhISE=}
 
+resilience4j:
+  circuitbreaker:
+    circuit-breaker-aspect-order: 1
+    instances:
+      orderService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+
+      productService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+
+      inventoryService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+
+  retry:
+    retry-aspect-order: 2
+    instances:
+      orderService:
+        max-attempts: 3
+        wait-duration: 200ms
+
+      productService:
+        max-attempts: 3
+        wait-duration: 200ms
+
+      inventoryService:
+        max-attempts: 3
+        wait-duration: 200ms
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info,prometheus,metrics,circuitbreakers,retries
+
   endpoint:
     health:
       show-details: always
+
+  health:
+    circuitbreakers:
+      enabled: true
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
