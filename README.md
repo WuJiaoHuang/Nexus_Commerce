@@ -279,10 +279,3 @@ mvn -Dmaven.repo.local=.m2repo clean test
 mvn -Dmaven.repo.local=.m2repo clean package
 ```
 
-## Legacy / Historical Monolith
-
-`monolithic` 目录保留为微服务拆分前的历史版本，仅用于架构演进对比。本阶段不删除该目录，但它不参与当前父工程构建和核心微服务运行。
-
-## 后续阶段
-
-Doris Analytics / analytics-service：Not Added Yet，计划在后续阶段单独设计和验证。
