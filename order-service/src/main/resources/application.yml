@@ -67,6 +67,10 @@ management:
       percentiles-histogram:
         http.server.requests: true
 
+logging:
+  file:
+    name: ${NEXUS_LOG_DIR:${NEXUS_COMMERCE_ROOT:.}/logs}/order-service.log
+
 eureka:
   client:
     service-url:

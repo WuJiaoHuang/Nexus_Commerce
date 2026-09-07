@@ -1,9 +1,7 @@
-package org.example.com.securityplatform;
+package org.example.com.securityplatform.jwt;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.example.com.securityplatform.jwt.JwtTokenValidator;
-import org.example.com.securityplatform.jwt.JwtValidationResult;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.SecretKey;

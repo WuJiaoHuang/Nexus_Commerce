@@ -232,6 +232,32 @@ Prometheus: http://localhost:9090
 Grafana:    http://localhost:3000
 ```
 
+### AIOps Sentinel 观测接口
+
+`AIOps Sentinel` 当前通过以下三类接口观测本项目，不需要额外日志平台或链路追踪组件：
+
+- Prometheus Metrics：各 Spring Boot 服务的 `/actuator/prometheus`。
+- Actuator Health：各 Spring Boot 服务的 `/actuator/health`。
+- 文件日志：各服务写入项目根目录下的 `logs/*.log`。
+
+本项目已为主要服务配置日志文件路径：
+
+```text
+logs/api-gateway.log
+logs/user-service.log
+logs/product-service.log
+logs/order-service.log
+logs/inventory-service.log
+```
+
+`order-service` 的订单预览链路会在下游异常时写入 WARN 日志。停掉 `product-service` 后调用：
+
+```text
+POST http://localhost:8084/orders/preview
+```
+
+可以得到业务降级响应，同时 `logs/order-service.log` 会出现 product-service 调用失败和 fallback 触发记录，供 AIOps Sentinel 的 `query_logs` 工具检索。
+
 ## 测试
 
 运行全仓测试：

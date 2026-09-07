@@ -6,6 +6,8 @@ import org.example.com.orderservice.dto.InventoryView;
 import org.example.com.orderservice.dto.OrderPreviewRequest;
 import org.example.com.orderservice.dto.OrderPreviewResponse;
 import org.example.com.orderservice.dto.ProductView;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.http.HttpStatusCode;
@@ -19,6 +21,8 @@ import java.util.concurrent.CompletionException;
 
 @Service
 public class OrderWorkflowServiceImpl implements OrderWorkflowService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderWorkflowServiceImpl.class);
 
     private final RestTemplate restTemplate;
     private final AsyncTaskExecutor orderWorkflowExecutor;
@@ -70,6 +74,7 @@ public class OrderWorkflowServiceImpl implements OrderWorkflowService {
         Throwable root = throwable instanceof CompletionException && throwable.getCause() != null
                 ? throwable.getCause() : throwable;
         String reason = root == null ? "downstream service unavailable" : root.getMessage();
+        logger.warn("order preview fallback triggered for productId={}, reason={}", productId, reason);
         return new OrderPreviewResponse(productId, quantity, false, 0, false,
                 "preview temporarily degraded: " + reason);
     }
@@ -84,13 +89,26 @@ public class OrderWorkflowServiceImpl implements OrderWorkflowService {
             if (status.value() == 404) {
                 return Optional.empty();
             }
+            logger.warn("product-service returned HTTP {} during order preview for productId={}",
+                    status.value(), productId);
+            throw ex;
+        } catch (RuntimeException ex) {
+            logger.warn("product-service call failed during order preview for productId={}: {}",
+                    productId, ex.getMessage());
             throw ex;
         }
     }
 
     private InventoryView fetchInventory(String productId) {
-        InventoryView inventory = restTemplate.getForObject(
-                "http://INVENTORY-SERVICE/inventory/{productId}", InventoryView.class, productId);
+        InventoryView inventory;
+        try {
+            inventory = restTemplate.getForObject(
+                    "http://INVENTORY-SERVICE/inventory/{productId}", InventoryView.class, productId);
+        } catch (RuntimeException ex) {
+            logger.warn("inventory-service call failed during order preview for productId={}: {}",
+                    productId, ex.getMessage());
+            throw ex;
+        }
         if (inventory == null) {
             InventoryView fallback = new InventoryView();
             fallback.setProductId(productId);
