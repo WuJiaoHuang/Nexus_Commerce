@@ -1,0 +1,65 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: product-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/demo_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:app}
+    password: ${SPRING_DATASOURCE_PASSWORD:app}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      repositories:
+        enabled: false
+
+app:
+  cache:
+    product-ttl-seconds: ${APP_CACHE_PRODUCT_TTL_SECONDS:300}
+    empty-ttl-seconds: ${APP_CACHE_EMPTY_TTL_SECONDS:60}
+    lock-ttl-seconds: ${APP_CACHE_LOCK_TTL_SECONDS:3}
+  kafka:
+    topic:
+      product-created: ${APP_KAFKA_TOPIC_PRODUCT_CREATED:product-created}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+  endpoint:
+    health:
+      show-details: always
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  file:
+    name: ${NEXUS_LOG_DIR:${NEXUS_COMMERCE_ROOT:.}/logs}/product-service.log
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}

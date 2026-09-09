@@ -1,0 +1,10 @@
+target/
+.env
+.idea/
+.vscode/
+*.iml
+*.log
+logs/
+application-local.yml
+.m2repo/
+work-runtime-logs/

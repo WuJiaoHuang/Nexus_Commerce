@@ -1,0 +1,136 @@
+package org.example.com.orderservice.workflow;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import org.example.com.common.result.Result;
+import org.example.com.orderservice.dto.InventoryView;
+import org.example.com.orderservice.dto.OrderPreviewRequest;
+import org.example.com.orderservice.dto.OrderPreviewResponse;
+import org.example.com.orderservice.dto.ProductView;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+@Service
+public class OrderWorkflowServiceImpl implements OrderWorkflowService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderWorkflowServiceImpl.class);
+
+    private final RestTemplate restTemplate;
+    private final AsyncTaskExecutor orderWorkflowExecutor;
+
+    public OrderWorkflowServiceImpl(RestTemplate restTemplate,
+                                    @Qualifier("orderWorkflowExecutor") AsyncTaskExecutor orderWorkflowExecutor) {
+        this.restTemplate = restTemplate;
+        this.orderWorkflowExecutor = orderWorkflowExecutor;
+    }
+
+    @Override
+    @Retry(name = "orderPreview")
+    @CircuitBreaker(name = "orderPreview", fallbackMethod = "previewFallback")
+    public OrderPreviewResponse preview(OrderPreviewRequest request) {
+        if (request == null || request.getProductId() == null || request.getProductId().isBlank()) {
+            return new OrderPreviewResponse(null, null, false, 0, false, "productId is required");
+        }
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), false, 0, false,
+                    "quantity must be greater than 0");
+        }
+
+        CompletableFuture<Optional<ProductView>> productFuture = CompletableFuture.supplyAsync(
+                () -> fetchProduct(request.getProductId()), orderWorkflowExecutor);
+
+        CompletableFuture<InventoryView> inventoryFuture = CompletableFuture.supplyAsync(
+                () -> fetchInventory(request.getProductId()), orderWorkflowExecutor);
+
+        CompletableFuture.allOf(productFuture, inventoryFuture).join();
+        Optional<ProductView> product = productFuture.join();
+        InventoryView inventory = inventoryFuture.join();
+
+        if (product.isEmpty()) {
+            return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), false,
+                    0, false, "product not found");
+        }
+
+        int available = inventory.getAvailableQuantity() == null ? 0 : inventory.getAvailableQuantity();
+        boolean reservable = available >= request.getQuantity();
+        String message = reservable ? "ready to place order" : "insufficient inventory";
+
+        return new OrderPreviewResponse(request.getProductId(), request.getQuantity(), true,
+                available, reservable, message);
+    }
+
+    public OrderPreviewResponse previewFallback(OrderPreviewRequest request, Throwable throwable) {
+        String productId = request == null ? null : request.getProductId();
+        Integer quantity = request == null ? null : request.getQuantity();
+        Throwable root = throwable instanceof CompletionException && throwable.getCause() != null
+                ? throwable.getCause() : throwable;
+        String reason = root == null ? "downstream service unavailable" : root.getMessage();
+        logger.warn("order preview fallback triggered for productId={}, reason={}", productId, reason);
+        return new OrderPreviewResponse(productId, quantity, false, 0, false,
+                "preview temporarily degraded: " + reason);
+    }
+
+    private Optional<ProductView> fetchProduct(String productId) {
+        try {
+            ResponseEntity<Result<ProductView>> response = restTemplate.exchange(
+                    "http://PRODUCT-SERVICE/product/{id}",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {
+                    },
+                    productId);
+            Result<ProductView> result = response.getBody();
+            return result == null ? Optional.empty() : Optional.ofNullable(result.getData());
+        } catch (HttpClientErrorException ex) {
+            HttpStatusCode status = ex.getStatusCode();
+            if (status.value() == 404) {
+                return Optional.empty();
+            }
+            logger.warn("product-service returned HTTP {} during order preview for productId={}",
+                    status.value(), productId);
+            throw ex;
+        } catch (RuntimeException ex) {
+            logger.warn("product-service call failed during order preview for productId={}: {}",
+                    productId, ex.getMessage());
+            throw ex;
+        }
+    }
+
+    private InventoryView fetchInventory(String productId) {
+        Result<InventoryView> result;
+        try {
+            ResponseEntity<Result<InventoryView>> response = restTemplate.exchange(
+                    "http://INVENTORY-SERVICE/inventory/{productId}",
+                    HttpMethod.GET,
+                    null,
+                    new ParameterizedTypeReference<>() {
+                    },
+                    productId);
+            result = response.getBody();
+        } catch (RuntimeException ex) {
+            logger.warn("inventory-service call failed during order preview for productId={}: {}",
+                    productId, ex.getMessage());
+            throw ex;
+        }
+        if (result == null || result.getData() == null) {
+            InventoryView fallback = new InventoryView();
+            fallback.setProductId(productId);
+            fallback.setAvailableQuantity(0);
+            return fallback;
+        }
+        return result.getData();
+    }
+}

@@ -1,0 +1,139 @@
+{
+  "info": {
+    "name": "springcloud3 Distributed Workflow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "End-to-end demo for user/product/order/inventory via API Gateway."
+  },
+  "item": [
+    {
+      "name": "1. Signup User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"email\": \"{{email}}\"\n}"
+        },
+        "url": "{{baseUrl}}/user"
+      }
+    },
+    {
+      "name": "2. Login User (Get JWT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  pm.environment.set('token', pm.response.text());",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": "{{baseUrl}}/user/login"
+      }
+    },
+    {
+      "name": "3. Create Product",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "role", "value": "admin"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{productId}}\",\n  \"name\": \"Interview Laptop\",\n  \"price\": 999.99,\n  \"stock\": 10,\n  \"description\": \"demo product\"\n}"
+        },
+        "url": "{{baseUrl}}/product"
+      }
+    },
+    {
+      "name": "4. Seed Inventory",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "role", "value": "admin"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantity\": 20\n}"
+        },
+        "url": "{{baseUrl}}/inventory/{{productId}}"
+      }
+    },
+    {
+      "name": "5. Create Order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "  const body = pm.response.json();",
+              "  if (body.id) pm.environment.set('orderId', body.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"},
+          {"key": "role", "value": "admin"}
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 2\n}"
+        },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "6. Get Order (After Reservation)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "role", "value": "admin"}
+        ],
+        "url": "{{baseUrl}}/orders/{{orderId}}"
+      }
+    },
+    {
+      "name": "7. Cancel Order",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "role", "value": "admin"}
+        ],
+        "url": "{{baseUrl}}/orders/{{orderId}}/cancel"
+      }
+    },
+    {
+      "name": "8. Get Inventory",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "role", "value": "admin"}
+        ],
+        "url": "{{baseUrl}}/inventory/{{productId}}"
+      }
+    }
+  ]
+}
